@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/* Jika Anda ingin tetap menggunakan cara lama (v3), gunakan ini: */
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities;
+*/
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
