@@ -101,15 +101,36 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/user/pengaturan', async (req, res) => {
   try {
     const { userId, jam_bangun, jam_tidur, aktivitas } = req.body;
+    
+    // Validasi input
+    if (!userId || !jam_bangun || !jam_tidur || !aktivitas) {
+      return res.status(400).json({ msg: "Data tidak lengkap. Pastikan semua field terisi." });
+    }
+
+    // Format waktu (HH:MM -> HH:MM:SS)
+    const formatTime = (time) => {
+      if (!time) return '00:00:00';
+      if (time.includes(':') && time.split(':').length === 2) {
+        return time + ':00';
+      }
+      return time;
+    };
+
+    const formattedJamBangun = formatTime(jam_bangun);
+    const formattedJamTidur = formatTime(jam_tidur);
+
     const connection = await mysql.createConnection(dbConfig);
     
+    // Update user settings
     await connection.execute(
       'UPDATE users SET jam_bangun = ?, jam_tidur = ?, aktivitas = ? WHERE id = ?',
-      [jam_bangun, jam_tidur, aktivitas, userId]
+      [formattedJamBangun, formattedJamTidur, aktivitas, userId]
     );
     
+    // Hapus jadwal lama
     await connection.execute('DELETE FROM schedules WHERE user_id = ?', [userId]);
     
+    // Buat jadwal baru
     const jadwalData = [
       [userId, '06:00:00', 'Bangun Pagi', 'Mulai hari dengan semangat'],
       [userId, '07:00:00', 'Sarapan', 'Makan bergizi untuk energi'],
@@ -118,17 +139,19 @@ app.post('/api/user/pengaturan', async (req, res) => {
       [userId, '14:00:00', 'Aktivitas Sore', 'Lanjutkan kegiatan produktif'],
       [userId, '18:00:00', 'Makan Malam', 'Makan malam bersama keluarga'],
       [userId, '20:00:00', 'Relaksasi', 'Waktu santai dan istirahat'],
-      [userId, jam_tidur + ':00', 'Tidur', 'Istirahat yang cukup']
+      [userId, formattedJamTidur, 'Tidur', 'Istirahat yang cukup']
     ];
     
     for (const jadwal of jadwalData) {
       await connection.execute('INSERT INTO schedules (user_id, waktu, kegiatan, catatan) VALUES (?, ?, ?, ?)', jadwal);
     }
+    
     await connection.end();
+    console.log('✅ Pengaturan berhasil disimpan untuk user:', userId);
     res.json({ success: true, msg: "Pengaturan berhasil disimpan!" });
   } catch (error) {
     console.error('❌ Pengaturan Error:', error.message);
-    res.status(500).json({ msg: "Error database saat menyimpan pengaturan" });
+    res.status(500).json({ msg: "Error database saat menyimpan pengaturan: " + error.message });
   }
 });
 
